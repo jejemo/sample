@@ -1,42 +1,40 @@
 package id.icena.sample.data.repository
 
 import id.icena.sample.data.datasource.UserDataSource
-import id.icena.sample.data.datasource.local.model.UserLocalEntity
-import id.icena.sample.data.datasource.remote.model.UserApiEntity
+import id.icena.sample.data.mapper.UserMapper
 import id.icena.sample.domain.model.User
 
+@Suppress("IMPLICIT_CAST_TO_ANY")
 class UserRepository(
     private val apiDataSource: UserDataSource.Remote,
-    private val localDataSource: UserDataSource.Local
+    private val localDataSource: UserDataSource.Local,
+    private val mapper: UserMapper
 ) {
     fun getUser(): User? {
         return if (localDataSource.getUser() != null) {
-            mappingLocalToDomain(localDataSource.getUser()!!)
+            mapper.mappingLocalToDomain(localDataSource.getUser()!!)
         } else {
             // save data api to local
-            localDataSource.setUser(apiDataSource.getUser())
+            val user = mapper.mappingApiToLocal(apiDataSource.getUser())
+            localDataSource.saveUserAsObject(user)
 
-            mappingApiToDomain(apiDataSource.getUser())
+            mapper.mappingApiToDomain(apiDataSource.getUser())
         }
     }
 
-    // mapper data api model to domain model
-    private fun mappingApiToDomain(result: UserApiEntity): User? {
-        return User(
-            id = 0,
-            name = result.name,
-            age = result.age,
-            isFromApi = true
-        )
+    fun getUsers(): List<User>? {
+        return localDataSource.getUsers()?.map {
+            mapper.mappingLocalToDomain(it)!!
+        }
     }
 
-    // mapper data local model to domain model
-    private fun mappingLocalToDomain(result: UserLocalEntity): User? {
-        return User(
-            id = result.id,
-            name = result.name,
-            age = result.age,
-            isFromApi = false
-        )
+    fun saveUser(user: User) {
+        val size = localDataSource.getUsers()?.size ?: 0
+        val index = if (size != 0) localDataSource.getUsers()?.get(size - 1)?.id else 0
+
+        val userMapper = mapper.mappingDomainToLocal(user, index.toString().toInt() + 1)
+
+        // save data domain to local
+        localDataSource.saveUserAsList(userMapper)
     }
 }
