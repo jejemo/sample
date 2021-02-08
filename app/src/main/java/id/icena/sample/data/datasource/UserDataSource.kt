@@ -9,7 +9,9 @@ interface UserDataSource {
     }
 
     interface Local {
-        fun setUser(user: UserApiEntity)
+        fun saveUserAsObject(user: UserLocalEntity)
+        fun saveUserAsList(user: UserLocalEntity)
         fun getUser(): UserLocalEntity?
+        fun getUsers(): List<UserLocalEntity>?
     }
 }
